@@ -27,20 +27,15 @@ class Routes(fixerClient: fixer.ApiClient)
     parameters('base, 'target.?) { (base, target) =>
 
       val baseCurrency = Currency(base)
-      val targetCurrencyOpt = target.map(Currency)
+      val targetCurrency = target.map(Currency)
 
-      onComplete(fixerClient.getLatestRates(baseCurrency)) {
+      onComplete(fixerClient.getLatestRates(baseCurrency, targetCurrency)) {
         case Success(ratesResponse) =>
-
-          val filteredResponseRates = targetCurrencyOpt match {
-            case None => ratesResponse.rates
-            case Some(targetCurrency) => ratesResponse.rates.filterKeys(_ == targetCurrency)
-          }
 
           val result = CurrencyRateResponse(
             base = ratesResponse.base,
             timestamp = ZonedDateTime.now(ZoneId.of("UTC")),
-            rates = filteredResponseRates
+            rates = ratesResponse.rates
           )
           complete(result)
 
