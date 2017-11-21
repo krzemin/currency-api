@@ -17,7 +17,9 @@ object Main extends App {
 
   val log = Logging(system, this.getClass)
 
-  val routes = new Routes()
+  val fixerClient = new fixer.ApiClientImpl
+
+  val routes = new Routes(fixerClient)
 
   val serverBindingFuture: Future[ServerBinding] = Http().bindAndHandle(routes.mainRoute, "localhost", 9000)
 
