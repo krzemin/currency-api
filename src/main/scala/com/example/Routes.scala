@@ -10,7 +10,7 @@ import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
-import com.example.models.{Currency, CurrencyRatesResponse}
+import com.example.models.{Currency, CurrencyRatesResponse, FailedResponse, SuccessResponse}
 import de.heikoseeberger.akkahttpcirce._
 import io.circe.generic.auto._
 import io.circe.parser._
@@ -45,16 +45,18 @@ class Routes(fixerClient: fixer.ApiClient, currencyWatcher: publisher.CurrencyWa
       onComplete(fixerResponseF) {
         case Success(ratesResponse) =>
           complete {
-            CurrencyRatesResponse(
-              base = ratesResponse.base,
-              timestamp = timestamp.getOrElse(ZonedDateTime.now).toInstant.atZone(ZoneId.of("UTC")),
-              rates = ratesResponse.rates
-            )
+            SuccessResponse {
+              CurrencyRatesResponse(
+                base = ratesResponse.base,
+                timestamp = timestamp.getOrElse(ZonedDateTime.now).toInstant.atZone(ZoneId.of("UTC")),
+                rates = ratesResponse.rates
+              )
+            }
           }
 
         case Failure(why) =>
           log.error(why, "Fixer client request failed")
-          complete(StatusCodes.InternalServerError -> why.getMessage)
+          complete(StatusCodes.InternalServerError -> FailedResponse(why.getMessage))
       }
     }
   }
@@ -63,7 +65,9 @@ class Routes(fixerClient: fixer.ApiClient, currencyWatcher: publisher.CurrencyWa
     pathEndOrSingleSlash {
       get {
         complete {
-          currencyWatcher.listAllWatches().mapValues(_.checkInterval.toString())
+          SuccessResponse {
+            currencyWatcher.listAllWatches().mapValues(_.checkInterval.toString())
+          }
         }
       }
     } ~
@@ -72,16 +76,16 @@ class Routes(fixerClient: fixer.ApiClient, currencyWatcher: publisher.CurrencyWa
 
       post {
         if(currencyWatcher.startCurrencyObserver(15.seconds, currency)) {
-          complete(s"Observer for $currencySymbol created with check interval of 5 minutes.")
+          complete(SuccessResponse(s"Observer for $currencySymbol created with check interval of 5 minutes."))
         } else {
-          complete(StatusCodes.PreconditionFailed, s"Observer for $currencySymbol already exists!")
+          complete(StatusCodes.PreconditionFailed, FailedResponse(s"Observer for $currencySymbol already exists!"))
         }
       } ~
       delete {
         if(currencyWatcher.stopCurrencyObserver(currency)) {
-          complete(s"Observer for $currencySymbol deleted successfully.")
+          complete(SuccessResponse(s"Observer for $currencySymbol deleted successfully."))
         } else {
-          complete(StatusCodes.PreconditionFailed, s"Observer for $currencySymbol didn't exist!")
+          complete(StatusCodes.PreconditionFailed, FailedResponse(s"Observer for $currencySymbol didn't exist!"))
         }
       }
     }
