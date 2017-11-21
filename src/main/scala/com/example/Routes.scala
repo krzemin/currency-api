@@ -24,15 +24,23 @@ class Routes(fixerClient: fixer.ApiClient)
   val log = Logging(sys, classOf[Routes])
 
   val mainRoute: Route = path("rates") {
-    parameters('base) { base =>
+    parameters('base, 'target.?) { (base, target) =>
 
-      onComplete(fixerClient.getLatestRates(Currency(base))) {
+      val baseCurrency = Currency(base)
+      val targetCurrencyOpt = target.map(Currency)
+
+      onComplete(fixerClient.getLatestRates(baseCurrency)) {
         case Success(ratesResponse) =>
+
+          val filteredResponseRates = targetCurrencyOpt match {
+            case None => ratesResponse.rates
+            case Some(targetCurrency) => ratesResponse.rates.filterKeys(_ == targetCurrency)
+          }
 
           val result = CurrencyRateResponse(
             base = ratesResponse.base,
             timestamp = ZonedDateTime.now(ZoneId.of("UTC")),
-            rates = ratesResponse.rates
+            rates = filteredResponseRates
           )
           complete(result)
 
