@@ -4,6 +4,7 @@ import java.time.{ZoneId, ZonedDateTime}
 
 import akka.actor.ActorSystem
 import akka.event.Logging
+import akka.http.scaladsl.server.PathMatchers
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
@@ -18,15 +19,16 @@ import com.example.utils.CirceValueClass._
 import com.example.utils.CirceValueClassKeyEncoder._
 
 import scala.util.{Failure, Success}
+import scala.concurrent.duration._
 
-class Routes(fixerClient: fixer.ApiClient)
+class Routes(fixerClient: fixer.ApiClient, currencyWatcher: publisher.CurrencyWatcher)
             (implicit sys: ActorSystem, mat: Materializer) extends FailFastCirceSupport {
 
   val log = Logging(sys, classOf[Routes])
 
   private val stringToZonedDateTime = Unmarshaller.strict[String, ZonedDateTime](ZonedDateTime.parse)
 
-  val mainRoute: Route = path("rates") {
+  val ratesQueryRoute: Route = path("rates") {
     parameters('base, 'target.?, 'timestamp.as(stringToZonedDateTime).?) { (base, target, timestamp) =>
 
       val baseCurrency = Currency(base)
@@ -56,5 +58,36 @@ class Routes(fixerClient: fixer.ApiClient)
       }
     }
   }
+
+  val publicationRoute: Route = pathPrefix("publication") {
+    pathEndOrSingleSlash {
+      get {
+        complete {
+          currencyWatcher.listAllWatches().mapValues(_.checkInterval.toString())
+        }
+      }
+    } ~
+    path(PathMatchers.Segment) { currencySymbol =>
+      val currency = Currency(currencySymbol)
+
+      post {
+        if(currencyWatcher.startCurrencyObserver(15.seconds, currency)) {
+          complete(s"Observer for $currencySymbol created with check interval of 5 minutes.")
+        } else {
+          complete(StatusCodes.PreconditionFailed, s"Observer for $currencySymbol already exists!")
+        }
+      } ~
+      delete {
+        if(currencyWatcher.stopCurrencyObserver(currency)) {
+          complete(s"Observer for $currencySymbol deleted successfully.")
+        } else {
+          complete(StatusCodes.PreconditionFailed, s"Observer for $currencySymbol didn't exist!")
+        }
+      }
+    }
+
+  }
+
+  val mainRoute: Route = ratesQueryRoute ~ publicationRoute
 
 }

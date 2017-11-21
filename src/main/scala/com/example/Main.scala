@@ -4,9 +4,11 @@ import akka.actor.ActorSystem
 import akka.event.Logging
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.Http.ServerBinding
+import akka.http.scaladsl.model.Uri
 import akka.stream.ActorMaterializer
+import com.example.publisher.{CurrencyWatcher, RatesChangeNotifierImpl}
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 import scala.io.StdIn
 
 object Main extends App {
@@ -17,9 +19,13 @@ object Main extends App {
 
   val log = Logging(system, this.getClass)
 
-  val fixerClient = new fixer.ApiClientImpl
+  val ratesChangeWebhookUri = Uri("http://localhost:7091/webhooks")
 
-  val routes = new Routes(fixerClient)
+  val fixerClient = new fixer.ApiClientImpl
+  val ratesChangeNotifier = new RatesChangeNotifierImpl(ratesChangeWebhookUri)
+  val currencyWatcher = new CurrencyWatcher(fixerClient, ratesChangeNotifier)
+
+  val routes = new Routes(fixerClient, currencyWatcher)
 
   val serverBindingFuture: Future[ServerBinding] = Http().bindAndHandle(routes.mainRoute, "localhost", 9000)
 
@@ -30,6 +36,7 @@ object Main extends App {
   serverBindingFuture
     .flatMap(_.unbind())
     .onComplete { done =>
+      currencyWatcher.stopAll()
       done.failed.map { ex => log.error(ex, "Failed unbinding") }
       system.terminate()
     }
