@@ -13,7 +13,7 @@ import com.example.utils.CirceValueClassKeyEncoder._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class RatesChangeNotifierImpl(webhookUri: Uri)
+class RatesChangeNotifierImpl(webhookUri: Uri = Uri("http://localhost:7091/webhooks"))
                              (implicit sys: ActorSystem, mat: Materializer, ec: ExecutionContext)
   extends RatesChangeNotifier {
 

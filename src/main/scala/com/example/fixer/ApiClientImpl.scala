@@ -16,10 +16,9 @@ import com.example.utils.CirceAkkaSupport._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class ApiClientImpl(implicit sys: ActorSystem, mat: Materializer, ec: ExecutionContext)
+class ApiClientImpl(fixerUriBase: Uri = Uri("http://api.fixer.io"))
+                   (implicit sys: ActorSystem, mat: Materializer, ec: ExecutionContext)
   extends ApiClient {
-
-  private val fixerUriBase = Uri("http://api.fixer.io")
 
   def getLatestRates(base: Currency, target: Option[Currency] = None): Future[FixerRatesResponse] = {
 

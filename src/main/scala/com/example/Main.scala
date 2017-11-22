@@ -19,10 +19,9 @@ object Main extends App {
 
   val log = Logging(system, this.getClass)
 
-  val ratesChangeWebhookUri = Uri("http://localhost:7091/webhooks")
 
   val fixerClient = new fixer.ApiClientImpl
-  val ratesChangeNotifier = new RatesChangeNotifierImpl(ratesChangeWebhookUri)
+  val ratesChangeNotifier = new RatesChangeNotifierImpl()
   val currencyWatcher = new CurrencyWatcher(fixerClient, ratesChangeNotifier)
 
   val routes = new Routes(fixerClient, currencyWatcher)
