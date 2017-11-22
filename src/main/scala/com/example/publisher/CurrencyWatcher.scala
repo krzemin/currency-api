@@ -80,6 +80,6 @@ class CurrencyWatcher(fixerApiClient: ApiClient,
     observersPerCurrency = Map.empty
   }
 
-  def listAllWatches(): Map[Currency, CurrencyObservation] =
+  def listAllObservers(): Map[Currency, CurrencyObservation] =
     observersPerCurrency
 }

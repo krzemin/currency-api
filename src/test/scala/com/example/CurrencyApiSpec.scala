@@ -31,7 +31,7 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures
 
   val fakedNow = ZonedDateTime.now().toInstant.atZone(ZoneId.of("UTC"))
 
-  val mainRoute = new Routes(fixerClient, currencyWatcher, () => fakedNow).mainRoute
+  val mainRoute = new CurrencyApiRoutes(fixerClient, currencyWatcher, () => fakedNow).mainRoute
 
   override def beforeEach {
     wireMockServer.start()
@@ -67,7 +67,7 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures
           status should ===(StatusCodes.OK)
           contentType should ===(ContentTypes.`application/json`)
           entityAs[String] should ===(
-            s"""{"success":true,"response":{"base":"USD","timestamp":"$fakedNow","rates":$ratesJsonObj}}"""
+            s"""{"response":{"base":"USD","timestamp":"$fakedNow","rates":$ratesJsonObj},"success":true}"""
           )
         }
       }
@@ -89,7 +89,7 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures
           status should ===(StatusCodes.OK)
           contentType should ===(ContentTypes.`application/json`)
           entityAs[String] should ===(
-            s"""{"success":true,"response":{"base":"USD","timestamp":"$fakedNow","rates":$plnRateJsonObj}}"""
+            s"""{"response":{"base":"USD","timestamp":"$fakedNow","rates":$plnRateJsonObj},"success":true}"""
           )
         }
       }
@@ -114,7 +114,7 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures
           status should ===(StatusCodes.OK)
           contentType should ===(ContentTypes.`application/json`)
           entityAs[String] should ===(
-            s"""{"success":true,"response":{"base":"USD","timestamp":"$weekAgoTimestamp","rates":$ratesJsonObj}}"""
+            s"""{"response":{"base":"USD","timestamp":"$weekAgoTimestamp","rates":$ratesJsonObj},"success":true}"""
           )
         }
       }
@@ -139,7 +139,7 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures
           status should ===(StatusCodes.OK)
           contentType should ===(ContentTypes.`application/json`)
           entityAs[String] should ===(
-            s"""{"success":true,"response":{"base":"USD","timestamp":"$weekAgoTimestamp","rates":$plnRateJsonObj}}"""
+            s"""{"response":{"base":"USD","timestamp":"$weekAgoTimestamp","rates":$plnRateJsonObj},"success":true}"""
           )
         }
       }
@@ -232,13 +232,13 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures
         request ~> mainRoute ~> check {
           status should ===(StatusCodes.OK)
           contentType should ===(ContentTypes.`application/json`)
-          entityAs[String] should ===("""{"success":true,"response":"Observer for USD created with check interval of 1 seconds."}""")
+          entityAs[String] should ===("""{"response":"Observer for USD created with check interval of 1 seconds.","success":true}""")
         }
 
         HttpRequest(uri = "/publication") ~> mainRoute ~> check {
           status should ===(StatusCodes.OK)
           contentType should ===(ContentTypes.`application/json`)
-          entityAs[String] should ===("""{"success":true,"response":{"USD":"1 second"}}""")
+          entityAs[String] should ===("""{"response":{"USD":"1 second"},"success":true}""")
         }
 
         eventually {
@@ -258,13 +258,13 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures
         deleteRequest ~> mainRoute ~> check {
           status should ===(StatusCodes.OK)
           contentType should ===(ContentTypes.`application/json`)
-          entityAs[String] should ===("""{"success":true,"response":"Observer for USD deleted successfully."}""")
+          entityAs[String] should ===("""{"response":"Observer for USD deleted successfully.","success":true}""")
         }
 
         HttpRequest(uri = "/publication") ~> mainRoute ~> check {
           status should ===(StatusCodes.OK)
           contentType should ===(ContentTypes.`application/json`)
-          entityAs[String] should ===("""{"success":true,"response":{}}""")
+          entityAs[String] should ===("""{"response":{},"success":true}""")
         }
       }
     }
