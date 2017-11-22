@@ -43,7 +43,7 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
   val ratesJsonObj = """{"CHF":0.99161,"GBP":0.75782,"PLN":3.5898,"EUR":0.84782}"""
   val plnRateJsonObj = """{"PLN":3.5898}"""
 
-  "Routes" when {
+  "CurrencyApi" when {
 
     "/rates endpoint" should {
 
@@ -52,11 +52,9 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
         stubFor {
           get(urlEqualTo("/latest?base=USD"))
             .willReturn {
-              aResponse()
-                .withStatus(200)
-                .withBody {
-                  s"""{"base":"USD","date":"2017-11-22","rates":$ratesJsonObj}"""
-                }
+              okJson {
+                s"""{"base":"USD","date":"2017-11-22","rates":$ratesJsonObj}"""
+              }
             }
         }
 
@@ -76,11 +74,9 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
         stubFor {
           get(urlEqualTo("/latest?base=USD&symbols=PLN"))
             .willReturn {
-              aResponse()
-                .withStatus(200)
-                .withBody {
-                  s"""{"base":"USD","date":"2017-11-22","rates":$plnRateJsonObj}"""
-                }
+              okJson {
+                s"""{"base":"USD","date":"2017-11-22","rates":$plnRateJsonObj}"""
+              }
             }
         }
 
@@ -103,11 +99,9 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
         stubFor {
           get(urlEqualTo(s"/$weekAgoDate?base=USD"))
             .willReturn {
-              aResponse()
-                .withStatus(200)
-                .withBody {
-                  s"""{"base":"USD","date":"$weekAgoDate","rates":$ratesJsonObj}"""
-                }
+              okJson {
+                s"""{"base":"USD","date":"$weekAgoDate","rates":$ratesJsonObj}"""
+              }
             }
         }
 
@@ -130,11 +124,9 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
         stubFor {
           get(urlEqualTo(s"/$weekAgoDate?base=USD&symbols=PLN"))
             .willReturn {
-              aResponse()
-                .withStatus(200)
-                .withBody {
-                  s"""{"base":"USD","date":"$weekAgoDate","rates":$plnRateJsonObj}"""
-                }
+              okJson {
+                s"""{"base":"USD","date":"$weekAgoDate","rates":$plnRateJsonObj}"""
+              }
             }
         }
 
