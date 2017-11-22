@@ -43,29 +43,58 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
   }
 
   val ratesJsonObj = """{"CHF":0.99161,"GBP":0.75782,"PLN":3.5898,"EUR":0.84782}"""
+  val plnRateJsonObj = """{"PLN":3.5898}"""
 
-  "Routes" should {
-    "return latest currency rates from fixer.io on /rates endpoint" in {
+  "Routes" when {
 
-      stubFor {
-        get(urlEqualTo("/latest?base=USD"))
-          .willReturn {
-            aResponse()
-              .withStatus(200)
-              .withBody {
-                s"""{"base":"USD","date":"2017-11-22","rates":$ratesJsonObj}"""
-              }
-          }
+    "/rates endpoint" should {
+
+      "return latest currency rates from fixer.io" in {
+
+        stubFor {
+          get(urlEqualTo("/latest?base=USD"))
+            .willReturn {
+              aResponse()
+                .withStatus(200)
+                .withBody {
+                  s"""{"base":"USD","date":"2017-11-22","rates":$ratesJsonObj}"""
+                }
+            }
+        }
+
+        val request = HttpRequest(uri = "/rates?base=USD")
+
+        request ~> mainRoute ~> check {
+          status should ===(StatusCodes.OK)
+          contentType should ===(ContentTypes.`application/json`)
+          entityAs[String] should ===(
+            s"""{"success":true,"response":{"base":"USD","timestamp":"$fakedNow","rates":$ratesJsonObj}}"""
+          )
+        }
       }
 
-      val request = HttpRequest(uri = Uri("/rates").withQuery(Query("base" -> "USD")))
+      "return latest currency rate of target currency from fixer.io" in {
 
-      request ~> mainRoute ~> check {
-        status should ===(StatusCodes.OK)
-        contentType should ===(ContentTypes.`application/json`)
-        entityAs[String] should ===(
-          s"""{"success":true,"response":{"base":"USD","timestamp":"$fakedNow","rates":$ratesJsonObj}}"""
-        )
+        stubFor {
+          get(urlEqualTo("/latest?base=USD&symbols=PLN"))
+            .willReturn {
+              aResponse()
+                .withStatus(200)
+                .withBody {
+                  s"""{"base":"USD","date":"2017-11-22","rates":$plnRateJsonObj}"""
+                }
+            }
+        }
+
+        val request = HttpRequest(uri = "/rates?base=USD&target=PLN")
+
+        request ~> mainRoute ~> check {
+          status should ===(StatusCodes.OK)
+          contentType should ===(ContentTypes.`application/json`)
+          entityAs[String] should ===(
+            s"""{"success":true,"response":{"base":"USD","timestamp":"$fakedNow","rates":$plnRateJsonObj}}"""
+          )
+        }
       }
     }
   }
