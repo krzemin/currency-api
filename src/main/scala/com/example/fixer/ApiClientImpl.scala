@@ -3,6 +3,7 @@ package com.example.fixer
 import java.time.LocalDate
 
 import akka.actor.ActorSystem
+import akka.event.Logging
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.{HttpRequest, StatusCodes, Uri}
 import akka.http.scaladsl.model.Uri.{Path, Query}
@@ -19,6 +20,8 @@ import scala.concurrent.{ExecutionContext, Future}
 class ApiClientImpl(fixerUriBase: Uri = Uri("http://api.fixer.io"))
                    (implicit sys: ActorSystem, mat: Materializer, ec: ExecutionContext)
   extends ApiClient {
+
+  val log = Logging(sys, classOf[ApiClientImpl])
 
   def getLatestRates(base: Currency, target: Option[Currency] = None): Future[FixerRatesResponse] = {
 
@@ -39,6 +42,9 @@ class ApiClientImpl(fixerUriBase: Uri = Uri("http://api.fixer.io"))
   }
 
   private def executeFixerRequest(uri: Uri): Future[FixerRatesResponse] = {
+
+    log.info(s"Executing request to fixer.io: $uri")
+
     Http().singleRequest(HttpRequest(uri = uri)).flatMap { httpResponse =>
       if(httpResponse.status == StatusCodes.OK) {
         httpResponse.decodeEntityAs[FixerRatesResponse]()

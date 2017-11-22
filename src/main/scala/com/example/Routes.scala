@@ -21,7 +21,9 @@ import com.example.utils.CirceValueClassKeyEncoder._
 import scala.util.{Failure, Success}
 import scala.concurrent.duration._
 
-class Routes(fixerClient: fixer.ApiClient, currencyWatcher: publisher.CurrencyWatcher)
+class Routes(fixerClient: fixer.ApiClient,
+             currencyWatcher: publisher.CurrencyWatcher,
+             currentTimeProvider: () => ZonedDateTime = () => ZonedDateTime.now)
             (implicit sys: ActorSystem, mat: Materializer) extends FailFastCirceSupport {
 
   val log = Logging(sys, classOf[Routes])
@@ -48,7 +50,7 @@ class Routes(fixerClient: fixer.ApiClient, currencyWatcher: publisher.CurrencyWa
             SuccessResponse {
               CurrencyRatesResponse(
                 base = ratesResponse.base,
-                timestamp = timestamp.getOrElse(ZonedDateTime.now).toInstant.atZone(ZoneId.of("UTC")),
+                timestamp = timestamp.getOrElse(currentTimeProvider()).toInstant.atZone(ZoneId.of("UTC")),
                 rates = ratesResponse.rates
               )
             }

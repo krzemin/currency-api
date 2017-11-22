@@ -18,9 +18,10 @@ lazy val root = (project in file(".")).
       "io.circe"          %% "circe-parser"         % circeVersion,
       "io.circe"          %% "circe-java8"          % circeVersion,
 
-      "com.typesafe.akka" %% "akka-http-testkit"    % akkaHttpVersion % Test,
-      "com.typesafe.akka" %% "akka-testkit"         % akkaVersion     % Test,
-      "com.typesafe.akka" %% "akka-stream-testkit"  % akkaVersion     % Test,
-      "org.scalatest"     %% "scalatest"            % "3.0.4"         % Test
+      "com.typesafe.akka"      %% "akka-http-testkit"    % akkaHttpVersion % Test,
+      "com.typesafe.akka"      %% "akka-testkit"         % akkaVersion     % Test,
+      "com.typesafe.akka"      %% "akka-stream-testkit"  % akkaVersion     % Test,
+      "org.scalatest"          %% "scalatest"            % "3.0.4"         % Test,
+      "com.github.tomakehurst" %  "wiremock"             % "2.11.0"        % Test
     )
   )
