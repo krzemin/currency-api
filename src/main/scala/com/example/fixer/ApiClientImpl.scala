@@ -53,7 +53,7 @@ class ApiClientImpl(fixerUriBase: Uri = Uri("http://api.fixer.io"))
           Future.failed(new RuntimeException(s"fixer api returned an error: ${errorResponse.error}"))
         }
       } else {
-        Future.failed(new RuntimeException(s"expected status 200/OK, got ${httpResponse.status}"))
+        Future.failed(new RuntimeException(s"expected status 200 OK, got ${httpResponse.status}"))
       }
     }
   }

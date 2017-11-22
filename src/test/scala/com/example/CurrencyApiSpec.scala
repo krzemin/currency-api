@@ -150,6 +150,53 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
           )
         }
       }
+
+      "handle expected fixer.io errors" in {
+        stubFor {
+          get(urlEqualTo("/latest?base=USD"))
+            .willReturn {
+              aResponse()
+                .withStatus(422)
+                .withBody {
+                  s"""{"error":"some error happened"}"""
+                }
+            }
+        }
+
+        val request = HttpRequest(uri = "/rates?base=USD")
+
+        request ~> mainRoute ~> check {
+          status should ===(StatusCodes.InternalServerError)
+          contentType should ===(ContentTypes.`application/json`)
+          entityAs[String] should ===(
+            s"""{"success":false,"message":"fixer api returned an error: some error happened"}"""
+          )
+        }
+      }
+
+      "handle unexpected fixer.io errors" in {
+        stubFor {
+          get(urlEqualTo("/latest?base=USD"))
+            .willReturn {
+              aResponse()
+                .withStatus(500)
+                .withBody {
+                  s"""server error"""
+                }
+            }
+        }
+
+        val request = HttpRequest(uri = "/rates?base=USD")
+
+        request ~> mainRoute ~> check {
+          status should ===(StatusCodes.InternalServerError)
+          contentType should ===(ContentTypes.`application/json`)
+          entityAs[String] should ===(
+            s"""{"success":false,"message":"expected status 200 OK, got 500 Internal Server Error"}"""
+          )
+        }
+      }
+
     }
   }
 
