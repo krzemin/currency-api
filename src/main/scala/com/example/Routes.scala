@@ -4,9 +4,8 @@ import java.time.{ZoneId, ZonedDateTime}
 
 import akka.actor.ActorSystem
 import akka.event.Logging
-import akka.http.scaladsl.server.PathMatchers
+import akka.http.scaladsl.server.{PathMatchers, RejectionHandler, Route}
 import akka.http.scaladsl.model._
-import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
 import akka.http.scaladsl.unmarshalling.Unmarshaller
 import akka.stream.Materializer
@@ -94,6 +93,10 @@ class Routes(fixerClient: fixer.ApiClient,
 
   }
 
-  val mainRoute: Route = ratesQueryRoute ~ publicationRoute
+  implicit def rejectionHandler = RejectionHandler.default
+
+  val mainRoute: Route = Route.seal {
+    ratesQueryRoute ~ publicationRoute
+  }
 
 }

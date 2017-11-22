@@ -2,7 +2,6 @@ package com.example
 
 import java.time.{ZoneId, ZonedDateTime}
 
-import akka.http.scaladsl.model.Uri.Query
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.testkit.ScalatestRouteTest
 import com.github.tomakehurst.wiremock.WireMockServer
@@ -31,7 +30,6 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
   val fakedNow = ZonedDateTime.now().toInstant.atZone(ZoneId.of("UTC"))
 
   val mainRoute = new Routes(fixerClient, currencyWatcher, () => fakedNow).mainRoute
-
 
   override def beforeEach {
     wireMockServer.start()
@@ -197,6 +195,17 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
         }
       }
 
+      "handle missing required parameter 'base' gracefully" in {
+
+        val request = HttpRequest(uri = "/rates")
+
+        request ~> mainRoute ~> check {
+          status should ===(StatusCodes.NotFound)
+          println(entityAs[String])
+          contentType should ===(ContentTypes.`text/plain(UTF-8)`)
+          entityAs[String] should ===("Request is missing required query parameter 'base'")
+        }
+      }
     }
   }
 
