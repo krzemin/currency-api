@@ -2,7 +2,7 @@ package com.example.publisher
 
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, HttpRequest, Uri}
+import akka.http.scaladsl.model._
 import akka.stream.Materializer
 import com.example.fixer.FixerRatesResponse
 import io.circe.syntax._
@@ -20,7 +20,7 @@ class RatesChangeNotifierImpl(webhookUri: Uri = Uri("http://localhost:7091/webho
   def notifyCurrencyChanged(fixerRatesResponse: FixerRatesResponse): Future[FixerRatesResponse] = {
 
     val jsonEntity = HttpEntity(ContentTypes.`application/json`, fixerRatesResponse.asJson.noSpaces)
-    val request = HttpRequest(uri = webhookUri, entity = jsonEntity)
+    val request = HttpRequest(method = HttpMethods.POST, uri = webhookUri, entity = jsonEntity)
     Http().singleRequest(request).map(_ => fixerRatesResponse)
   }
 }

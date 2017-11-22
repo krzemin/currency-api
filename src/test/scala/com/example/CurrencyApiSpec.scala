@@ -8,12 +8,14 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import com.github.tomakehurst.wiremock.client.WireMock._
 import com.github.tomakehurst.wiremock.core.WireMockConfiguration._
-import org.scalatest.concurrent.ScalaFutures
+import com.github.tomakehurst.wiremock.stubbing.Scenario
+import org.scalatest.concurrent.{Eventually, IntegrationPatience, ScalaFutures}
 import org.scalatest.{BeforeAndAfterEach, Matchers, WordSpec}
 
 import scala.util.Random
 
-class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with ScalatestRouteTest with BeforeAndAfterEach {
+class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures
+  with ScalatestRouteTest with BeforeAndAfterEach with Eventually with IntegrationPatience {
 
   val wiremockHost = "localhost"
   val wiremockPort: Int = randomPort()
@@ -41,6 +43,7 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
   }
 
   val ratesJsonObj = """{"CHF":0.99161,"GBP":0.75782,"PLN":3.5898,"EUR":0.84782}"""
+  val changedRatesJsonObj = """{"CHF":0.98376,"GBP":0.72233,"PLN":3.5709,"EUR":0.84100}"""
   val plnRateJsonObj = """{"PLN":3.5898}"""
 
   "CurrencyApi" when {
@@ -193,9 +196,75 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
 
         request ~> mainRoute ~> check {
           status should ===(StatusCodes.NotFound)
-          println(entityAs[String])
           contentType should ===(ContentTypes.`text/plain(UTF-8)`)
           entityAs[String] should ===("Request is missing required query parameter 'base'")
+        }
+      }
+    }
+
+    "/publication endpoint" should {
+
+      "support publishing scenario" in {
+
+        stubFor {
+          get(urlEqualTo("/latest?base=USD")).inScenario("publishing")
+            .whenScenarioStateIs(Scenario.STARTED)
+            .willReturn { okJson { s"""{"base":"USD","date":"2017-11-22","rates":$ratesJsonObj}""" } }
+            .willSetStateTo("2nd request")
+        }
+
+        stubFor {
+          get(urlEqualTo("/latest?base=USD")).inScenario("publishing")
+            .whenScenarioStateIs("2nd request")
+            .willReturn { okJson { s"""{"base":"USD","date":"2017-11-22","rates":$ratesJsonObj}""" } }
+            .willSetStateTo("3rd request")
+        }
+
+        stubFor {
+          get(urlEqualTo("/latest?base=USD")).inScenario("publishing")
+            .whenScenarioStateIs("3rd request")
+            .willReturn { okJson { s"""{"base":"USD","date":"2017-11-22","rates":$changedRatesJsonObj}""" } }
+        }
+
+        val request = HttpRequest(method = HttpMethods.POST, uri = "/publication/USD")
+          .withEntity(HttpEntity(ContentTypes.`application/json`, "1"))
+
+        request ~> mainRoute ~> check {
+          status should ===(StatusCodes.OK)
+          contentType should ===(ContentTypes.`application/json`)
+          entityAs[String] should ===("""{"success":true,"response":"Observer for USD created with check interval of 1 seconds."}""")
+        }
+
+        HttpRequest(uri = "/publication") ~> mainRoute ~> check {
+          status should ===(StatusCodes.OK)
+          contentType should ===(ContentTypes.`application/json`)
+          entityAs[String] should ===("""{"success":true,"response":{"USD":"1 second"}}""")
+        }
+
+        eventually {
+          verify {
+            postRequestedFor(urlEqualTo("/webhook"))
+              .withRequestBody {
+                equalToJson {
+                  s"""{"base":"USD","date":"2017-11-22","rates":$changedRatesJsonObj}"""
+                }
+              }
+          }
+        }
+
+        val deleteRequest = HttpRequest(method = HttpMethods.DELETE, uri = "/publication/USD")
+          .withEntity(HttpEntity(ContentTypes.`application/json`, "1"))
+
+        deleteRequest ~> mainRoute ~> check {
+          status should ===(StatusCodes.OK)
+          contentType should ===(ContentTypes.`application/json`)
+          entityAs[String] should ===("""{"success":true,"response":"Observer for USD deleted successfully."}""")
+        }
+
+        HttpRequest(uri = "/publication") ~> mainRoute ~> check {
+          status should ===(StatusCodes.OK)
+          contentType should ===(ContentTypes.`application/json`)
+          entityAs[String] should ===("""{"success":true,"response":{}}""")
         }
       }
     }

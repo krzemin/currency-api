@@ -76,10 +76,12 @@ class Routes(fixerClient: fixer.ApiClient,
       val currency = Currency(currencySymbol)
 
       post {
-        if(currencyWatcher.startCurrencyObserver(15.seconds, currency)) {
-          complete(SuccessResponse(s"Observer for $currencySymbol created with check interval of 5 minutes."))
-        } else {
-          complete(StatusCodes.PreconditionFailed, FailedResponse(s"Observer for $currencySymbol already exists!"))
+        entity(as[Int]) { checkIntervalSecs =>
+          if(currencyWatcher.startCurrencyObserver(checkIntervalSecs.seconds, currency)) {
+            complete(SuccessResponse(s"Observer for $currencySymbol created with check interval of $checkIntervalSecs seconds."))
+          } else {
+            complete(StatusCodes.PreconditionFailed, FailedResponse(s"Observer for $currencySymbol already exists!"))
+          }
         }
       } ~
       delete {
