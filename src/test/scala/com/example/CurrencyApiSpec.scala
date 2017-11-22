@@ -96,6 +96,60 @@ class CurrencyApiSpec extends WordSpec with Matchers with ScalaFutures with Scal
           )
         }
       }
+
+      "return currency rates of requested date from fixer.io" in {
+
+        val weekAgoTimestamp = fakedNow.minusWeeks(1)
+        val weekAgoDate = weekAgoTimestamp.toLocalDate
+
+        stubFor {
+          get(urlEqualTo(s"/$weekAgoDate?base=USD"))
+            .willReturn {
+              aResponse()
+                .withStatus(200)
+                .withBody {
+                  s"""{"base":"USD","date":"$weekAgoDate","rates":$ratesJsonObj}"""
+                }
+            }
+        }
+
+        val request = HttpRequest(uri = s"/rates?base=USD&timestamp=$weekAgoTimestamp")
+
+        request ~> mainRoute ~> check {
+          status should ===(StatusCodes.OK)
+          contentType should ===(ContentTypes.`application/json`)
+          entityAs[String] should ===(
+            s"""{"success":true,"response":{"base":"USD","timestamp":"$weekAgoTimestamp","rates":$ratesJsonObj}}"""
+          )
+        }
+      }
+
+      "return rate of requested target currency at specified date from fixer.io" in {
+
+        val weekAgoTimestamp = fakedNow.minusWeeks(1)
+        val weekAgoDate = weekAgoTimestamp.toLocalDate
+
+        stubFor {
+          get(urlEqualTo(s"/$weekAgoDate?base=USD&symbols=PLN"))
+            .willReturn {
+              aResponse()
+                .withStatus(200)
+                .withBody {
+                  s"""{"base":"USD","date":"$weekAgoDate","rates":$plnRateJsonObj}"""
+                }
+            }
+        }
+
+        val request = HttpRequest(uri = s"/rates?base=USD&target=PLN&timestamp=$weekAgoTimestamp")
+
+        request ~> mainRoute ~> check {
+          status should ===(StatusCodes.OK)
+          contentType should ===(ContentTypes.`application/json`)
+          entityAs[String] should ===(
+            s"""{"success":true,"response":{"base":"USD","timestamp":"$weekAgoTimestamp","rates":$plnRateJsonObj}}"""
+          )
+        }
+      }
     }
   }
 
